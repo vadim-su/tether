@@ -31,6 +31,10 @@ class TurnFailed:
     error: BaseException
 
 
+class TurnError(Exception):
+    """A turn failed; the cause was already published as `TurnFailed`."""
+
+
 @dataclass
 class Notice:
     """A host message for the user (command output, warnings)."""
@@ -85,7 +89,7 @@ class Session:
                         output = event.result.output
         except Exception as e:
             await self.bus.publish(TurnFailed(e))
-            raise
+            raise TurnError(str(e)) from e
         await self.bus.publish(TurnFinished(output))
         return output
 

@@ -17,7 +17,7 @@ from tether.api.plugin import Command
 from tether.frontends.headless import Headless
 from tether.host.config import TetherConfig, build_agent, load_config, project_dir, user_dir
 from tether.host.loader import PluginSet, discover
-from tether.host.session import Session
+from tether.host.session import Session, TurnError
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -52,6 +52,8 @@ def main(argv: list[str] | None = None) -> int:
             asyncio.run(_chat(session))
     except KeyboardInterrupt:
         return 130
+    except TurnError:
+        return 1  # already shown by the frontend
     except Exception as e:
         print(f"tether: {e}", file=sys.stderr)
         return 1
@@ -86,6 +88,8 @@ async def _chat(session: Session) -> None:
             continue
         try:
             await session.handle(text)
+        except TurnError:
+            pass  # already shown by the frontend
         except Exception as e:
             print(f"error: {e}", file=sys.stderr)
 

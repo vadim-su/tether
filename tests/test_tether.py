@@ -164,12 +164,14 @@ def test_harness_capability_resolved_by_name():
     assert agent.run_sync("plan").output
 
 
-def test_missing_model_is_a_clear_error():
-    from tether.host.config import HostConfig, TetherConfig
+def test_default_model_is_haiku(monkeypatch):
+    from tether.host.config import DEFAULT_MODEL, HostConfig, TetherConfig
     from tether.host.loader import PluginSet
 
-    with pytest.raises(ValueError, match="no model"):
-        build_agent(TetherConfig(agent={}, host=HostConfig()), PluginSet())
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    agent = build_agent(TetherConfig(agent={}, host=HostConfig()), PluginSet())
+    assert DEFAULT_MODEL == "anthropic:claude-haiku-4-5"
+    assert agent.model.model_name == "claude-haiku-4-5"
 
 
 def test_session_keeps_history_and_rebuilds_agent():

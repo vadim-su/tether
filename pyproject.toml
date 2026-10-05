@@ -6,14 +6,13 @@ readme = "README.md"
 requires-python = ">=3.14"
 classifiers = ["Programming Language :: Python :: 3.14"]
 dependencies = [
-    "pydantic-ai-slim>=2.54,<3",
+    "pydantic-ai-slim[anthropic]>=2.54,<3",  # the default model is Claude Haiku
     # Alpha (0.x): pinned to a minor version, bump deliberately.
     "pydantic-ai-harness>=0.54,<0.55",
     "pyyaml>=6",
 ]
 
 [project.optional-dependencies]
-anthropic = ["pydantic-ai-slim[anthropic]"]
 openai = ["pydantic-ai-slim[openai]"]
 
 [project.scripts]

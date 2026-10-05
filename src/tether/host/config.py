@@ -1,7 +1,7 @@
 """Config: a native Pydantic AI agent spec plus a `host:` section for tether itself.
 
 ```yaml
-model: anthropic:claude-opus-5-5
+model: anthropic:claude-haiku-4-5  # the default when omitted
 instructions: Ты помощник.
 capabilities:
   - LocalWorkspace: {root: .}
@@ -30,6 +30,8 @@ from pydantic_ai.capabilities import CAPABILITY_TYPES
 from tether.host.loader import PluginSet, resolve_harness_capability
 
 CONFIG_NAME = "tether.yaml"
+DEFAULT_MODEL = "anthropic:claude-haiku-4-5"
+"""Used when neither tether.yaml nor --model names one; needs ANTHROPIC_API_KEY."""
 
 
 def user_dir() -> Path:
@@ -108,6 +110,4 @@ def build_agent(config: TetherConfig, plugins: PluginSet, *, model: str | None =
             custom.append(cap)
             known.add(name)
     spec = AgentSpec.model_validate(config.agent)
-    if model is None and spec.model is None:
-        raise ValueError("no model configured: set `model:` in tether.yaml or pass --model")
-    return Agent.from_spec(spec, custom_capability_types=custom, model=model)
+    return Agent.from_spec(spec, custom_capability_types=custom, model=model or spec.model or DEFAULT_MODEL)

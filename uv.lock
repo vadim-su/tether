@@ -698,14 +698,11 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic-ai-harness" },
-    { name = "pydantic-ai-slim" },
+    { name = "pydantic-ai-slim", extra = ["anthropic"] },
     { name = "pyyaml" },
 ]
 
 [package.optional-dependencies]
-anthropic = [
-    { name = "pydantic-ai-slim", extra = ["anthropic"] },
-]
 openai = [
     { name = "pydantic-ai-slim", extra = ["openai"] },
 ]
@@ -719,12 +716,11 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pydantic-ai-harness", specifier = ">=0.54,<0.55" },
-    { name = "pydantic-ai-slim", specifier = ">=2.54,<3" },
-    { name = "pydantic-ai-slim", extras = ["anthropic"], marker = "extra == 'anthropic'" },
+    { name = "pydantic-ai-slim", extras = ["anthropic"], specifier = ">=2.54,<3" },
     { name = "pydantic-ai-slim", extras = ["openai"], marker = "extra == 'openai'" },
     { name = "pyyaml", specifier = ">=6" },
 ]
-provides-extras = ["anthropic", "openai"]
+provides-extras = ["openai"]
 
 [package.metadata.requires-dev]
 dev = [

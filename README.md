@@ -6,23 +6,26 @@
 
 ## Быстрый старт
 
-Нужен Python 3.14 (`uv python install 3.14`).
+Нужен Python 3.14 (`uv python install 3.14`) и ключ Anthropic API. По умолчанию используется Claude Haiku 4.5 (`anthropic:claude-haiku-4-5`).
 
 ```bash
-uv sync --extra anthropic
-export ANTHROPIC_API_KEY=...
-mkdir -p .tether && cat > .tether/tether.yaml <<'YAML'
-model: anthropic:claude-opus-5-5
-capabilities:
-  - LocalWorkspace: {root: .}
-  - Coder: {}
-YAML
+uv sync
+export ANTHROPIC_API_KEY=sk-ant-...
+uv run tether chat                       # интерактивно, на Haiku
 uv run tether run "Что лежит в этом репозитории?"
-uv run tether chat
+uv run tether -m anthropic:claude-sonnet-5-5 chat   # другая модель на один запуск
 uv run tether plugins
 ```
 
-Без ключа можно проверить проводку на тестовой модели: `uv run tether -m test run привет`.
+Чтобы агент работал с файлами проекта, добавьте capability в `.tether/tether.yaml`:
+
+```yaml
+capabilities:
+  - LocalWorkspace: {root: .}
+  - Coder: {}
+```
+
+Модель можно закрепить там же (`model: anthropic:claude-opus-5-5`). Без ключа проводку можно проверить на тестовой модели: `uv run tether -m test run привет`.
 
 ## Плагин за минуту
 
