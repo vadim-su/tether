@@ -5,8 +5,6 @@ an ordinary Pydantic AI capability. Anything Pydantic AI can do is therefore
 available without wrappers; `Plugin` only removes the boilerplate.
 """
 
-from __future__ import annotations
-
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -18,7 +16,7 @@ from pydantic_ai.tools import Tool
 if TYPE_CHECKING:
     from tether.host.session import Session
 
-CommandHandler = Callable[["Session", str], Awaitable[None] | None]
+type CommandHandler = Callable[[Session, str], Awaitable[None] | None]
 
 
 @dataclass

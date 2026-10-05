@@ -1,7 +1,5 @@
 """Plain stdout frontend: model text to stdout, tool activity and notices to stderr."""
 
-from __future__ import annotations
-
 import sys
 from typing import Any, TextIO
 

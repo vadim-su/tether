@@ -10,8 +10,6 @@ Capabilities from `pydantic_ai_harness` are resolved lazily by name, because man
 them need optional extras.
 """
 
-from __future__ import annotations
-
 import importlib
 import importlib.util
 import inspect

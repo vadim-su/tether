@@ -5,8 +5,6 @@ tether chat             interactive loop in the terminal
 tether plugins          list discovered plugins
 """
 
-from __future__ import annotations
-
 import argparse
 import asyncio
 import logging

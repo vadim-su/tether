@@ -6,6 +6,8 @@
 
 ## Быстрый старт
 
+Нужен Python 3.14 (`uv python install 3.14`).
+
 ```bash
 uv sync --extra anthropic
 export ANTHROPIC_API_KEY=...

@@ -3,7 +3,8 @@ name = "tether"
 version = "0.1.0"
 description = "Moddable agent harness on Pydantic AI: everything is a plugin"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
+classifiers = ["Programming Language :: Python :: 3.14"]
 dependencies = [
     "pydantic-ai-slim>=2.54,<3",
     # Alpha (0.x): pinned to a minor version, bump deliberately.
@@ -31,7 +32,7 @@ packages = ["src/tether"]
 [tool.ruff]
 extend-exclude = ["*.md"]
 line-length = 110
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

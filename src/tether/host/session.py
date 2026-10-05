@@ -4,8 +4,6 @@ The agent is rebuilt from config and plugins on demand, while the history lives
 here, so a rebuilt agent (new config, reloaded plugin) continues the conversation.
 """
 
-from __future__ import annotations
-
 import inspect
 from collections.abc import Callable
 from dataclasses import dataclass

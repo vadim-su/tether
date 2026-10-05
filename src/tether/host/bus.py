@@ -1,7 +1,5 @@
 """Fan-out of session events to every attached frontend."""
 
-from __future__ import annotations
-
 import inspect
 import logging
 from collections.abc import Awaitable, Callable
@@ -9,7 +7,7 @@ from typing import Any
 
 log = logging.getLogger(__name__)
 
-Subscriber = Callable[[Any], Awaitable[None] | None]
+type Subscriber = Callable[[Any], Awaitable[None] | None]
 
 
 class Bus:

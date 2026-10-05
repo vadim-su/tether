@@ -16,8 +16,6 @@ recursively, the project wins on scalars, and capability lists are concatenated
 with the project's entry replacing a global one of the same name.
 """
 
-from __future__ import annotations
-
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
