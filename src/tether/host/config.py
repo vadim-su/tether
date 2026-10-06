@@ -4,7 +4,7 @@
 model: anthropic:claude-haiku-4-5  # the default when omitted
 instructions: Ты помощник.
 capabilities:
-  - LocalWorkspace: {root: .}
+  - LocalWorkspace: {working_dir: .}
   - Coder: {}
   - git-guard: {}
 host:

@@ -10,6 +10,7 @@ Capabilities from `pydantic_ai_harness` are resolved lazily by name, because man
 them need optional extras.
 """
 
+import dataclasses
 import importlib
 import importlib.util
 import inspect
@@ -122,7 +123,20 @@ def _to_loaded(item: Plugin | type[AbstractCapability[Any]], source: str) -> Loa
         return LoadedPlugin(item.name, item.capability_type(), source, item)
     name = item.get_serialization_name()
     assert name is not None
-    return LoadedPlugin(name, item, source)
+    return LoadedPlugin(name, spec_compatible(item), source)
+
+
+def spec_compatible(cls: type[AbstractCapability[Any]]) -> type[AbstractCapability[Any]]:
+    """`Agent.from_spec` only accepts dataclass capability types (e.g. harness `Coder` is not one).
+
+    A non-dataclass gets a same-named dataclass subclass that keeps the original `__init__`.
+    """
+    if dataclasses.is_dataclass(cls) and "__dataclass_fields__" in cls.__dict__:
+        return cls
+    name = cls.get_serialization_name()
+    shim = type(cls.__name__, (cls,), {"__module__": cls.__module__, "__qualname__": cls.__qualname__})
+    shim.get_serialization_name = classmethod(lambda _cls: name)  # type: ignore[method-assign]
+    return dataclasses.dataclass(init=False, repr=False, eq=False)(shim)
 
 
 def import_path(path: Path) -> ModuleType:
@@ -154,4 +168,4 @@ def resolve_harness_capability(name: str) -> type[AbstractCapability[Any]] | Non
         value = getattr(harness, name)
     except ImportError as e:
         raise ImportError(f"capability {name!r} needs an optional extra of pydantic-ai-harness: {e}") from e
-    return value if _is_capability_class(value) else None
+    return spec_compatible(value) if _is_capability_class(value) else None

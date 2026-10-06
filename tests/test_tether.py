@@ -250,3 +250,19 @@ def test_cli_plugins_command(tmp_path, capsys):
     write(tmp_path / ".tether" / "tether.yaml", "capabilities: [xp]\n")
     assert main(["plugins"]) == 0
     assert "✓ xp" in capsys.readouterr().out
+
+
+def test_non_dataclass_harness_capability_loads_by_name(tmp_path):
+    """Harness `Coder` is not a dataclass; it must still work from tether.yaml."""
+    from tether.host.config import HostConfig, TetherConfig
+    from tether.host.loader import PluginSet
+
+    (tmp_path / "a.txt").write_text("hello")
+    config = TetherConfig(
+        agent={"capabilities": [{"LocalWorkspace": {"working_dir": str(tmp_path)}}, {"Coder": {}}]},
+        host=HostConfig(),
+    )
+    agent = build_agent(config, PluginSet(), model=TestModel(call_tools=["read_file"]))
+    result = agent.run_sync("read a.txt")
+    tool_returns = [p for m in result.all_messages() for p in m.parts if p.part_kind == "tool-return"]
+    assert [p.tool_name for p in tool_returns] == ["read_file"]

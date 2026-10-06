@@ -90,7 +90,7 @@ async def gst(session, argv):
 model: anthropic:claude-opus-5-5
 instructions: Ты помощник Вадима.
 capabilities:
-  - LocalWorkspace: {root: .}
+  - LocalWorkspace: {working_dir: .}
   - Coder: {}
   - Compaction: {}
   - git-guard: {}          # наш плагин

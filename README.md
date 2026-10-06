@@ -21,7 +21,7 @@ uv run tether plugins
 
 ```yaml
 capabilities:
-  - LocalWorkspace: {root: .}
+  - LocalWorkspace: {working_dir: .}
   - Coder: {}
 ```
 
