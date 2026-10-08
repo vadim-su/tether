@@ -1,0 +1,140 @@
+Screen {
+    layout: vertical;
+}
+
+#log {
+    height: 1fr;
+    padding: 0 1;
+    scrollbar-size-vertical: 1;
+}
+
+#banner {
+    margin: 1 0;
+}
+
+.user {
+    margin: 1 0 0 0;
+    padding: 0 1;
+    border-left: thick $accent;
+    background: $boost;
+    text-style: bold;
+}
+
+.assistant {
+    margin: 1 0 0 0;
+    padding: 0;
+}
+
+.assistant > MarkdownBlock:last-child {
+    margin-bottom: 0;
+}
+
+.thinking, .tool {
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+}
+
+.thinking CollapsibleTitle, .thinking-body {
+    color: $text-muted;
+    text-style: italic;
+}
+
+.tool CollapsibleTitle {
+    color: $text-muted;
+}
+
+.tool.running CollapsibleTitle {
+    color: $warning;
+}
+
+.tool.failed CollapsibleTitle, .tool.denied CollapsibleTitle {
+    color: $error;
+}
+
+.tool-args {
+    color: $text-muted;
+}
+
+.tool-result {
+    margin-top: 1;
+    max-height: 20;
+    overflow-y: auto;
+}
+
+.notice {
+    margin: 1 0 0 0;
+    color: $text-muted;
+}
+
+.warning {
+    margin: 1 0 0 0;
+    color: $warning;
+}
+
+.error {
+    margin: 1 0 0 0;
+    color: $error;
+}
+
+#status {
+    height: 1;
+    padding: 0 1;
+    background: $panel;
+}
+
+#prompt {
+    border: tall $accent;
+}
+
+.dialog-screen {
+    align: center middle;
+    background: $background 60%;
+}
+
+.dialog {
+    width: 90%;
+    max-width: 100;
+    height: auto;
+    max-height: 90%;
+    padding: 1 2;
+    border: thick $accent;
+    background: $surface;
+}
+
+.dialog.approval {
+    border: thick $warning;
+}
+
+.dialog-title {
+    margin-bottom: 1;
+}
+
+.dialog-body {
+    height: auto;
+    max-height: 30;
+}
+
+.approval-args {
+    padding: 0 1;
+    background: $boost;
+}
+
+.question-text {
+    margin-top: 1;
+}
+
+.custom-answer {
+    margin-bottom: 1;
+}
+
+.dialog-buttons {
+    height: auto;
+    margin-top: 1;
+    align-horizontal: right;
+}
+
+.dialog-buttons Button {
+    margin-left: 1;
+}

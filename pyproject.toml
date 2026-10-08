@@ -19,7 +19,13 @@ openai = ["pydantic-ai-slim[openai]"]
 tether = "tether.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "ruff>=0.6", "tether-plugin-tui"]
+
+[tool.uv.workspace]
+members = ["plugins/*"]
+
+[tool.uv.sources]
+tether-plugin-tui = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
@@ -36,6 +42,9 @@ target-version = "py314"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["tether", "tether_plugin_tui"]
+
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "plugins"]
 filterwarnings = ["ignore::DeprecationWarning"]

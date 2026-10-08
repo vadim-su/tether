@@ -1,8 +1,9 @@
 """`tether` command line.
 
 tether run "задача"     one turn, then exit
-tether chat             interactive loop in the terminal
-tether plugins          list discovered plugins
+tether chat             interactive session in the frontends from `host.frontends`
+tether chat --ui tui    ... or in the one named here
+tether plugins          list discovered plugins and frontends
 """
 
 import argparse
@@ -15,6 +16,9 @@ from typing import Any
 
 from tether.api.plugin import Command
 from tether.frontends.headless import Headless
+from tether.host import frontends
+from tether.host.approvals import DEFAULT_POLICY, Approvals
+from tether.host.ask_user import ask_user_type
 from tether.host.config import TetherConfig, build_agent, load_config, project_dir, user_dir
 from tether.host.loader import PluginSet, discover
 from tether.host.session import Session, TurnError
@@ -28,7 +32,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
     run_p = sub.add_parser("run", help="run one prompt and exit")
     run_p.add_argument("prompt", nargs="+")
-    sub.add_parser("chat", help="interactive session")
+    chat_p = sub.add_parser("chat", help="interactive session")
+    chat_p.add_argument("--ui", action="append", help="frontend to use, e.g. tui (repeatable)")
     sub.add_parser("plugins", help="list discovered plugins")
     args = parser.parse_args(argv)
 
@@ -44,12 +49,14 @@ def main(argv: list[str] | None = None) -> int:
         return _list_plugins(config, plugins)
 
     session = make_session(config, plugins, model=args.model)
-    Headless().attach(session)
     try:
         if args.cmd == "run":
+            Headless().attach(session)
             asyncio.run(session.handle(" ".join(args.prompt)))
         else:
-            asyncio.run(_chat(session))
+            names = args.ui or config.host.frontends
+            ui = [frontends.create(name, config.host.options(name)) for name in names]
+            asyncio.run(frontends.run_frontends(session, ui))
     except KeyboardInterrupt:
         return 130
     except TurnError:
@@ -60,9 +67,15 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def make_session(config: TetherConfig, plugins: PluginSet, *, model: str | None = None) -> Session:
+def make_session(config: TetherConfig, plugins: PluginSet, *, model: Any = None) -> Session:
     session = Session(
-        lambda: build_agent(config, plugins, model=model),
+        lambda: build_agent(
+            config,
+            plugins,
+            model=model,
+            host_types=[ask_user_type(session)],
+            host_capabilities=[Approvals(session, config.host.approvals or dict(DEFAULT_POLICY))],
+        ),
         commands=plugins.commands(config.capability_names),
     )
 
@@ -72,26 +85,6 @@ def make_session(config: TetherConfig, plugins: PluginSet, *, model: str | None 
 
     session.commands.setdefault("/help", Command("/help", help_command, "list commands"))
     return session
-
-
-async def _chat(session: Session) -> None:
-    loop = asyncio.get_running_loop()
-    while True:
-        try:
-            text = await loop.run_in_executor(None, input, "› ")
-        except EOFError:
-            return
-        text = text.strip()
-        if text in {"/exit", "/quit"}:
-            return
-        if not text:
-            continue
-        try:
-            await session.handle(text)
-        except TurnError:
-            pass  # already shown by the frontend
-        except Exception as e:
-            print(f"error: {e}", file=sys.stderr)
 
 
 def _list_plugins(config: TetherConfig, plugins: PluginSet) -> int:
@@ -104,6 +97,7 @@ def _list_plugins(config: TetherConfig, plugins: PluginSet) -> int:
         print(f"✗ {source}: {error}", file=sys.stderr)
     if not plugins.plugins:
         print("no plugins found", file=sys.stderr)
+    print(f"frontends: {', '.join(sorted(frontends.available()))}")
     return 1 if plugins.errors else 0
 
 

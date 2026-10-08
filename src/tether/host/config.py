@@ -8,7 +8,8 @@ capabilities:
   - Coder: {}
   - git-guard: {}
 host:
-  frontends: [headless]
+  frontends: [headless]   # or [tui] with tether-plugin-tui installed
+  approvals: {shell: ask, "*": allow}
 ```
 
 `~/.tether/tether.yaml` and `./.tether/tether.yaml` are merged: mappings merge
@@ -17,6 +18,7 @@ with the project's entry replacing a global one of the same name.
 """
 
 import os
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -25,8 +27,9 @@ import yaml
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent
 from pydantic_ai.agent.spec import AgentSpec
-from pydantic_ai.capabilities import CAPABILITY_TYPES
+from pydantic_ai.capabilities import CAPABILITY_TYPES, AbstractCapability
 
+from tether.host.approvals import Decision
 from tether.host.loader import PluginSet, resolve_harness_capability
 
 CONFIG_NAME = "tether.yaml"
@@ -46,6 +49,14 @@ class HostConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     frontends: list[str] = ["headless"]
+    """Frontends to run for `tether chat`; the session ends when the first one exits."""
+    approvals: dict[str, Decision] | None = None
+    """Tool name or glob -> allow | ask | deny; `None` uses `approvals.DEFAULT_POLICY`."""
+
+    def options(self, name: str) -> dict[str, Any]:
+        """The `host.<name>:` section, e.g. options for a frontend."""
+        value = (self.model_extra or {}).get(name)
+        return value if isinstance(value, dict) else {}
 
 
 @dataclass
@@ -101,13 +112,33 @@ def _cap_name(entry: Any) -> str:
     raise ValueError(f"capability entry must be a name or a one-key mapping, got {entry!r}")
 
 
-def build_agent(config: TetherConfig, plugins: PluginSet, *, model: str | None = None) -> Agent[Any, str]:
-    """Build the agent: plugins plus any `pydantic_ai_harness` capability the spec names."""
-    custom = plugins.capability_types()
+def build_agent(
+    config: TetherConfig,
+    plugins: PluginSet,
+    *,
+    model: Any = None,
+    host_types: Sequence[type[AbstractCapability[Any]]] = (),
+    host_capabilities: Sequence[AbstractCapability[Any]] = (),
+) -> Agent[Any, str]:
+    """Build the agent: plugins plus any `pydantic_ai_harness` capability the spec names.
+
+    `host_types` override same-named capability types (the host binds `AskUser` to the
+    session this way); `host_capabilities` are always added (e.g. approvals).
+    """
+    overridden = {t.get_serialization_name() for t in host_types}
+    custom = [
+        *host_types,
+        *(t for t in plugins.capability_types() if t.get_serialization_name() not in overridden),
+    ]
     known = {t.get_serialization_name() for t in custom} | set(CAPABILITY_TYPES)
     for name in config.capability_names:
         if name not in known and (cap := resolve_harness_capability(name)) is not None:
             custom.append(cap)
             known.add(name)
     spec = AgentSpec.model_validate(config.agent)
-    return Agent.from_spec(spec, custom_capability_types=custom, model=model or spec.model or DEFAULT_MODEL)
+    return Agent.from_spec(
+        spec,
+        custom_capability_types=custom,
+        model=model or spec.model or DEFAULT_MODEL,
+        capabilities=list(host_capabilities) or None,
+    )

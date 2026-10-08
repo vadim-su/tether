@@ -25,6 +25,31 @@ capabilities:
   - Coder: {}
 ```
 
+## Терминальный интерфейс
+
+TUI на Textual живёт отдельным плагином [plugins/tui](plugins/tui/README.md):
+
+```bash
+uv tool install --python 3.14 . --with ./plugins/tui
+tether chat --ui tui          # или host: {frontends: [tui]} в tether.yaml
+```
+
+При разработке (`uv sync`) он уже установлен: `uv run tether -m test chat --ui tui`.
+
+## Подтверждения и вопросы
+
+Перед `shell`, `write_file` и `edit_file` tether спрашивает разрешения у фронтенда. Политику задаёт `host.approvals` (имя инструмента или glob → `allow` | `ask` | `deny`):
+
+```yaml
+host:
+  approvals:
+    shell: ask
+    "write_*": ask
+    "*": allow
+```
+
+`AskUser` из pydantic-ai-harness включается как обычная capability (`- AskUser: {}`), а отвечает на его вопросы фронтенд. В `tether run` без терминала такие вызовы отклоняются.
+
 Модель можно закрепить там же (`model: anthropic:claude-opus-5-5`). Без ключа проводку можно проверить на тестовой модели: `uv run tether -m test run привет`.
 
 ## Плагин за минуту
@@ -64,6 +89,17 @@ capabilities:
 
 Плагином также может быть любой подкласс `pydantic_ai.capabilities.AbstractCapability` (`@dataclass`), а любая capability из `pydantic_ai_harness` (`Coder`, `Planning`, `Memory`, ...) подключается по имени без установки.
 
+## Свой фронтенд
+
+Фронтенд — любой объект с `async def run(session)`: подписывается на `session.bus`, отправляет ввод в `session.handle(...)`, отвечает на запросы через `session.answer(...)`. Регистрируется entry point'ом:
+
+```toml
+[project.entry-points."tether.frontends"]
+web = "tether_plugin_web:WebFrontend"
+```
+
+События описаны в `tether.api.events`. Если указать несколько фронтендов (`host.frontends: [tui, web]`), они работают с одной сессией одновременно, на запрос отвечает тот, кто успел первым.
+
 ## Где ищутся плагины
 
 1. Пакеты с entry point `[project.entry-points."tether.plugins"]`.
@@ -82,4 +118,4 @@ uv run ruff check . && uv run ruff format --check .
 
 ## Статус
 
-Этап 1 из [плана](docs/architecture.md#7-план-mvp): загрузчик плагинов, конфиг, хост сессий, headless-фронтенд и CLI. Дальше: подтверждения и `AskUser` через фронтенд, hot reload, TUI, web.
+Готово: загрузчик плагинов, конфиг, хост сессий, CLI, механизм фронтендов, подтверждения инструментов и `AskUser` через фронтенд, отмена хода, headless и TUI. Дальше по [плану](docs/architecture.md#7-план-mvp): hot reload, web, UI-вклады плагинов (статус, панели).

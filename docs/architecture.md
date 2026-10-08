@@ -112,11 +112,13 @@ host:
 
 Обратно фронтенд шлёт `UserInput`, `ApprovalAnswer`, `QuestionAnswer`, `RunCommand`, `Cancel`.
 
-Подтверждения и вопросы связываются с UI так: хост подключает `HandleDeferredToolCalls` и `AskUser` с обработчиками, которые публикуют запрос в шину и ждут ответа от любого фронтенда. Первый ответивший побеждает.
+Подтверждения и вопросы связываются с UI так: хост добавляет capability `Approvals` (оборачивает инструменты в `ApprovalRequiredToolset` по политике `host.approvals` и разрешает отложенные вызовы в `handle_deferred_tool_calls`) и подставляет в `AskUser` answerer сессии. Оба публикуют запрос (`ApprovalRequested`, `QuestionAsked`) в шину и ждут `session.answer(...)` от любого фронтенда. Первый ответивший побеждает, остальные получают `RequestResolved` и закрывают диалог. Сделано (2026-10-08).
+
+Фронтенд — объект с `async def run(session)`, регистрируется entry point'ом `tether.frontends`; опции берутся из `host.<имя>:`. `tether chat` запускает фронтенды из `host.frontends` (или `--ui`) на одной сессии и завершается, когда выходит первый.
 
 Фронтенды (все — плагины):
 
-- **TUI** на Textual, в том же процессе.
+- **TUI** на Textual, в том же процессе: отдельный пакет `tether-plugin-tui` в `plugins/tui` репозитория (сделано 2026-10-08).
 - **Web**: FastAPI отдаёт тот же поток в JSON по WebSocket плюс небольшой клиент. Одну сессию можно вести из терминала и браузера одновременно.
 - **ACP** почти бесплатно: в pydantic-ai-harness есть `run_acp_stdio`, и tether сразу работает в Zed и Toad. Пока experimental.
 - **headless** (`tether run "задача"`) печатает события в stdout.
@@ -150,8 +152,8 @@ tether/
 ## 7. План MVP
 
 1. Загрузчик плагинов, конфиг → `Agent`, SessionHost, headless-фронтенд. Проверить на `Coder` + `LocalWorkspace`.
-2. Шина хоста, подтверждения и `AskUser` через фронтенд; hot reload.
-3. TUI на Textual.
+2. Шина хоста, подтверждения и `AskUser` через фронтенд (готово); hot reload.
+3. TUI на Textual (готово, `plugins/tui`).
 4. Web: FastAPI + WebSocket + минимальный клиент.
 5. ACP-фронтенд и пара примеров плагинов, гайд «плагин за 5 минут».
 
