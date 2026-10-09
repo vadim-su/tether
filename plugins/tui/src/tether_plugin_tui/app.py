@@ -1,5 +1,6 @@
 """The Textual app: a chat log, a prompt, a status line and dialogs for requests."""
 
+from pathlib import Path
 from typing import Any
 
 from pydantic_ai import (
@@ -10,7 +11,7 @@ from pydantic_ai import (
     PartEndEvent,
     PartStartEvent,
 )
-from pydantic_ai.messages import TextPart, TextPartDelta, ThinkingPart, ThinkingPartDelta
+from pydantic_ai.messages import BinaryContent, TextPart, TextPartDelta, ThinkingPart, ThinkingPartDelta
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import VerticalScroll
@@ -29,11 +30,25 @@ from tether.api.events import (
     TurnStarted,
 )
 from tether.host.session import Session, TurnError
+from tether_plugin_tui import kitty
 from tether_plugin_tui.dialogs import ApprovalDialog, QuestionDialog
-from tether_plugin_tui.widgets import AssistantMessage, NoticeMessage, Thinking, ToolCall, UserMessage
+from tether_plugin_tui.kitty import ImageMode
+from tether_plugin_tui.widgets import (
+    AssistantMessage,
+    ImageView,
+    NoticeMessage,
+    Thinking,
+    ToolCall,
+    UserMessage,
+)
 
 SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
-LOCAL_COMMANDS = {"/exit": "quit", "/quit": "quit", "/clear": "clear the screen (history is kept)"}
+LOCAL_COMMANDS = {
+    "/exit": "quit",
+    "/quit": "quit",
+    "/clear": "clear the screen (history is kept)",
+    "/image": "show an image file: /image path.png",
+}
 
 
 class TetherApp(App[None]):
@@ -45,9 +60,10 @@ class TetherApp(App[None]):
         Binding("ctrl+d", "quit", "quit", show=False),
     ]
 
-    def __init__(self, session: Session, *, theme: str | None = None) -> None:
+    def __init__(self, session: Session, *, theme: str | None = None, images: ImageMode = "auto") -> None:
         super().__init__()
         self.session = session
+        self.images = kitty.supported(images)
         if theme:
             self.theme = theme
         self._unsubscribe: Any = None
@@ -102,6 +118,9 @@ class TetherApp(App[None]):
         if text == "/clear":
             self.action_clear()
             return
+        if text.partition(" ")[0] == "/image":
+            await self._show_image_file(text.partition(" ")[2].strip())
+            return
         if not text.startswith("/") or text.partition(" ")[0] not in self.session.commands:
             await self._add(UserMessage(text))
         self.run_worker(self._handle(text), group="turn", exit_on_error=False)
@@ -113,6 +132,14 @@ class TetherApp(App[None]):
             pass  # shown from TurnFailed
         except Exception as e:  # a command handler failed
             await self._add(NoticeMessage(f"error: {e}", kind="error"))
+
+    async def _show_image_file(self, path: str) -> None:
+        try:
+            data = Path(path).expanduser().read_bytes()
+        except OSError as e:
+            await self._add(NoticeMessage(f"error: {e}", kind="error"))
+            return
+        await self._add(ImageView(data, enabled=self.images, caption=Path(path).name))
 
     def action_cancel_turn(self) -> None:
         if not self.session.cancel():
@@ -151,9 +178,11 @@ class TetherApp(App[None]):
                 await self._end_parts()
                 widget = self._tools[part.tool_call_id] = ToolCall(part)
                 await self._add(widget)
-            case FunctionToolResultEvent(part=part):
+            case FunctionToolResultEvent(part=part, content=extra):
                 if (widget := self._tools.pop(part.tool_call_id, None)) is not None:
                     widget.finish(part)
+                for image in _images(part.content) + _images(extra):
+                    await self._add(ImageView(image.data, enabled=self.images, caption=part.tool_name))
             case AgentRunResultEvent():
                 self._update_status()
             case ApprovalRequested() | QuestionAsked():
@@ -219,6 +248,12 @@ class TetherApp(App[None]):
 
     def _banner(self) -> str:
         return f"[b]tether[/b] [dim]· {self._model} · /help for commands · esc cancels · ctrl+q quits[/dim]"
+
+
+def _images(content: Any) -> list[BinaryContent]:
+    """Images in a tool result: a `BinaryContent`, or one inside a list."""
+    items = content if isinstance(content, list | tuple) else [content]
+    return [item for item in items if isinstance(item, BinaryContent) and item.is_image]
 
 
 def _k(n: int) -> str:

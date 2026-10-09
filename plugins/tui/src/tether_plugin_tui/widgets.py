@@ -5,8 +5,12 @@ from typing import Any
 
 from pydantic_ai.messages import RetryPromptPart, ToolCallPart, ToolReturnPart
 from rich.markup import escape
+from rich.text import Text
 from textual.containers import Vertical
+from textual.widget import Widget
 from textual.widgets import Collapsible, Markdown, Static
+
+from tether_plugin_tui import kitty
 
 
 class UserMessage(Static):
@@ -67,6 +71,57 @@ class ToolCall(Collapsible):
         self.remove_class("running")
         self.add_class(outcome)
         self._result.update(_clip(content, 4000))
+
+
+class ImageView(Widget):
+    """An image over the kitty graphics protocol, or a one-line stand-in where it is not available."""
+
+    DEFAULT_CSS = """
+    ImageView {
+        width: auto;
+        height: auto;
+        margin: 0 0 0 2;
+    }
+    """
+
+    def __init__(self, data: bytes, *, enabled: bool, caption: str = "", max_rows: int = 20) -> None:
+        super().__init__()
+        self.data = data
+        self.enabled = enabled
+        self.caption = caption
+        self.max_rows = max_rows
+        self.image: kitty.KittyImage | None = None
+        self.png = kitty.to_png(data)
+        self.pixels = kitty.png_size(self.png) if self.png else None
+
+    def on_mount(self) -> None:
+        if self.enabled and self.png and self.pixels:
+            max_cols = max(1, min(100, self.app.size.width - 6))
+            cols, rows = kitty.fit(
+                *self.pixels, max_cols=max_cols, max_rows=self.max_rows, cell=kitty.cell_size()
+            )
+            self.image = kitty.KittyImage(self.png, cols, rows)
+            _write_terminal(self, self.image.transmit())
+
+    def on_unmount(self) -> None:
+        if self.image is not None:
+            _write_terminal(self, self.image.delete())
+
+    def render(self) -> Text:
+        if self.image is not None:
+            return Text("\n").join(self.image.lines())
+        size = f"{self.pixels[0]}×{self.pixels[1]}" if self.pixels else f"{len(self.data)} bytes"
+        why = "not a PNG" if self.png is None else "no kitty graphics in this terminal"
+        name = f"{self.caption} " if self.caption else ""
+        return Text(f"[image {name}{size}: {why}]", style="dim")
+
+
+def _write_terminal(widget: Widget, data: str) -> None:
+    """Send escape sequences straight to the terminal, in order with Textual's own output."""
+    driver = getattr(widget.app, "_driver", None)  # Textual has no public API for raw output
+    if driver is not None:
+        driver.write(data)
+        driver.flush()
 
 
 class NoticeMessage(Static):

@@ -90,7 +90,7 @@ Screen {
 
 .dialog-screen {
     align: center middle;
-    background: $background 60%;
+    background: transparent;
 }
 
 .dialog {
